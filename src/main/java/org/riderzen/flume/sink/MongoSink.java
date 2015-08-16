@@ -55,6 +55,7 @@ public class MongoSink extends AbstractSink implements Configurable {
     public static final String PK = "_id";
     public static final String OP_INC = "$inc";
     public static final String OP_SET = "$set";
+    public static final String DB_MAX_CONNECTIONS = "maxConnectionsPerHost";
 
     public static final boolean DEFAULT_AUTHENTICATION_ENABLED = false;
     public static final String DEFAULT_HOST = "localhost";
@@ -62,6 +63,7 @@ public class MongoSink extends AbstractSink implements Configurable {
     public static final String DEFAULT_DB = "events";
     public static final String DEFAULT_COLLECTION = "events";
     public static final int DEFAULT_BATCH = 100;
+    private static final int DEFAULT_DB_MAX_CONNECTIONS = 10;
     private static final Boolean DEFAULT_AUTO_WRAP = false;
     public static final String DEFAULT_WRAP_FIELD = "log";
     public static final String DEFAULT_TIMESTAMP_FIELD = null;
@@ -70,7 +72,7 @@ public class MongoSink extends AbstractSink implements Configurable {
 
     private static AtomicInteger counter = new AtomicInteger();
 
-    private Mongo mongo;
+    private MongoClient mongo;
     private DB db;
 
     private String host;
@@ -80,6 +82,7 @@ public class MongoSink extends AbstractSink implements Configurable {
     private String password;
     private CollectionModel model;
     private String dbName;
+    private int dbMaxConnectionsPerHost;
     private String collectionName;
     private int batchSize;
     private boolean autoWrap;
@@ -100,6 +103,7 @@ public class MongoSink extends AbstractSink implements Configurable {
             username = "";
             password = "";
         }
+        dbMaxConnectionsPerHost = context.getInteger(DB_MAX_CONNECTIONS, DEFAULT_DB_MAX_CONNECTIONS);
         model = CollectionModel.valueOf(context.getString(MODEL, CollectionModel.single.name()));
         dbName = context.getString(DB_NAME, DEFAULT_DB);
         collectionName = context.getString(COLLECTION, DEFAULT_COLLECTION);
@@ -115,7 +119,7 @@ public class MongoSink extends AbstractSink implements Configurable {
     public synchronized void start() {
         logger.info("Starting {}...", getName());
         try {
-            mongo = new Mongo(host, port);
+            mongo = new MongoClient(new ServerAddress(host, port), getOptions());
             db = mongo.getDB(dbName);
         } catch (UnknownHostException e) {
             logger.error("Can't connect to mongoDB", e);
@@ -374,6 +378,12 @@ public class MongoSink extends AbstractSink implements Configurable {
         documents.add(eventJson);
 
         return documents;
+    }
+
+    private MongoClientOptions getOptions(){
+        MongoClientOptions.Builder builder = new MongoClientOptions.Builder();
+        builder.connectionsPerHost(dbMaxConnectionsPerHost);
+        return builder.build();
     }
 
     public static enum CollectionModel {

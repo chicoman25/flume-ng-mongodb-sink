@@ -33,7 +33,7 @@ public class MongoSinkTest {
 
     @BeforeMethod(groups = {"dev"})
     public static void setup() throws UnknownHostException {
-        mongo = new Mongo("localhost", 27017);
+        mongo = new MongoClient("localhost", 27017);
 
         Map<String, String> ctxMap = new HashMap<String, String>();
         ctxMap.put(MongoSink.HOST, "localhost");
@@ -41,6 +41,7 @@ public class MongoSinkTest {
         ctxMap.put(MongoSink.DB_NAME, "test_events");
         ctxMap.put(MongoSink.COLLECTION, "test_log");
         ctxMap.put(MongoSink.BATCH_SIZE, "100");
+        ctxMap.put(MongoSink.DB_MAX_CONNECTIONS, "100");
 
         ctx.putAll(ctxMap);
 
